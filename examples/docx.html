@@ -2,12 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>DOCX Viewer (relative file)</title>
+    <title>DOCX Viewer</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        max-width: 90%;
+        width: 90%;
         margin: 1rem auto;
         padding: 1rem;
         line-height: 1.4;
@@ -17,9 +17,9 @@
         margin-bottom: 0.5rem;
       }
       #output {
+        width: 90%;
         border: 1px solid #ddd;
         border-radius: 25px;
-        width: 90%;
         padding: 1rem;
         min-height: 300px;
         background: #fafafa;
@@ -48,6 +48,10 @@
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.8/mammoth.browser.min.js"></script>
   </head>
   <body>
+    <div class="file-info" id="file-info">Loading...</div>
+
+    <div id="output">Rendering will appear here.</div>
+
     <script>
       // Helper to get ?file=... from URL
       function getQueryParam(name) {
@@ -85,10 +89,10 @@
             output.appendChild(warn);
           }
         } catch (err) {
-          output.innerHTML = `<div class="error"><strong>Error loading/converting:</strong> ${err.message}</div>
-          <p>Make sure the file exists at the relative path and you're serving over HTTP. Example usage:</p>
-          <pre>?file=docs/mydoc.docx</pre>`;
-          infoEl.textContent = `Failed to load: ${path}`;
+          // output.innerHTML = `<div class="error"><strong>Error loading/converting:</strong> ${err.message}</div>
+          // <p>Make sure the file exists at the relative path and you're serving over HTTP. Example usage:</p>
+          // <pre>?file=docs/mydoc.docx</pre>`;
+          // infoEl.textContent = `Failed to load: ${path}`;
           console.error(err);
         }
       }
