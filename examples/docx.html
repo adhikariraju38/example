@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DOCX Viewer (relative file)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        max-width: 900px;
+        margin: 1rem auto;
+        padding: 1rem;
+        line-height: 1.4;
+      }
+      h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+      }
+      #output {
+        border: 1px solid #ddd;
+        padding: 1rem;
+        min-height: 300px;
+        background: #fafafa;
+        overflow: auto;
+      }
+      .notice {
+        font-size: 0.9rem;
+        color: #555;
+        margin-bottom: 1rem;
+      }
+      .error {
+        color: darkred;
+      }
+      .file-info {
+        margin-bottom: 1rem;
+      }
+      a {
+        color: #0366d6;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+    </style>
+    <!-- Mammoth.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.8/mammoth.browser.min.js"></script>
+  </head>
+  <body>
+    <h1>DOCX Viewer</h1>
+    <div class="notice">
+      This loads a <code>.docx</code> file from the same path (relative URL) and
+      converts it in-browser to HTML. You must host this over HTTP/HTTPS (e.g.,
+      GitHub Pages); opening as <code>file://</code> may fail due to fetch
+      restrictions.
+    </div>
+
+    <div class="file-info" id="file-info">Loading...</div>
+
+    <div id="output">Rendering will appear here.</div>
+
+    <script>
+      // Helper to get ?file=... from URL
+      function getQueryParam(name) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(name);
+      }
+
+      // Default filename if not provided
+      const defaultDocx = "../docs/Elevator.docx";
+      const fileParam = getQueryParam("file");
+      const docxPath = fileParam ? decodeURIComponent(fileParam) : defaultDocx;
+
+      const infoEl = document.getElementById("file-info");
+      const output = document.getElementById("output");
+
+      async function loadDocx(path) {
+        infoEl.textContent = `Attempting to load: ${path}`;
+        try {
+          const resp = await fetch(path);
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+          }
+          const arrayBuffer = await resp.arrayBuffer();
+          infoEl.textContent = `Loaded: ${path} (size: ${arrayBuffer.byteLength} bytes)`;
+          output.innerHTML = "<em>Converting...</em>";
+          const result = await mammoth.convertToHtml({ arrayBuffer });
+          output.innerHTML = result.value;
+          if (result.messages && result.messages.length) {
+            const warn = document.createElement("div");
+            warn.style.fontSize = "0.8em";
+            warn.style.marginTop = "1em";
+            warn.textContent =
+              "Conversion notes: " +
+              result.messages.map((m) => m.message).join("; ");
+            output.appendChild(warn);
+          }
+        } catch (err) {
+          output.innerHTML = `<div class="error"><strong>Error loading/converting:</strong> ${err.message}</div>
+          <p>Make sure the file exists at the relative path and you're serving over HTTP. Example usage:</p>
+          <pre>?file=docs/mydoc.docx</pre>`;
+          infoEl.textContent = `Failed to load: ${path}`;
+          console.error(err);
+        }
+      }
+
+      loadDocx(docxPath);
+    </script>
+  </body>
+</html>
