@@ -48,9 +48,9 @@
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.8/mammoth.browser.min.js"></script>
   </head>
   <body>
-    <div class="file-info" id="file-info">Loading...</div>
+    <!-- <div class="file-info" id="file-info">Loading...</div>
 
-    <div id="output">Rendering will appear here.</div>
+    <div id="output">Rendering will appear here.</div> -->
 
     <script>
       // Helper to get ?file=... from URL
@@ -68,7 +68,7 @@
       const output = document.getElementById("output");
 
       async function loadDocx(path) {
-        infoEl.textContent = `Attempting to load: ${path}`;
+        // infoEl.textContent = `Attempting to load: ${path}`;
         try {
           const resp = await fetch(path);
           if (!resp.ok) {
