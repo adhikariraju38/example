@@ -2,101 +2,215 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>DOCX Viewer</title>
+    <title>DOCX Fullscreen Viewer</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
+      :root {
+        --bg: #0f111a;
+        --card: #1f2330;
+        --radius: 14px;
+        --border: 2px solid #2f3245;
+        --text: #e8eaf6;
+        --muted: #8f93b3;
+        --transition: 0.2s ease;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
+        margin: 0;
+        background: linear-gradient(135deg, #0e1020, #1f2330);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        width: 90%;
-        margin: 1rem auto;
-        padding: 1rem;
-        line-height: 1.4;
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
       }
-      h1 {
-        font-size: 1.8rem;
-        margin-bottom: 0.5rem;
-      }
-      #output {
-        width: 90%;
-        border: 1px solid #ddd;
-        border-radius: 25px;
-        padding: 1rem;
-        min-height: 300px;
-        background: #fafafa;
+      #viewer-wrapper {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--card);
+        border: var(--border);
+        border-radius: 0;
         overflow: auto;
       }
-      .notice {
-        font-size: 0.9rem;
-        color: #555;
-        margin-bottom: 1rem;
+      #header {
+        flex: 0 0 auto;
+        padding: 12px 16px;
+        background: #11152e;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 2;
       }
-      .error {
-        color: darkred;
+      #title {
+        flex: 1;
       }
-      .file-info {
-        margin-bottom: 1rem;
+      #file-path {
+        font-size: 12px;
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 60%;
+      }
+      #output {
+        flex: 1 1 auto;
+        position: relative;
+        padding: 24px 32px;
+        overflow: auto;
+        background: #0f111a;
+      }
+      #output > * {
+        max-width: 100%;
+      }
+      .loader-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 17, 26, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+        z-index: 5;
+        backdrop-filter: blur(4px);
+      }
+      .spinner {
+        width: 60px;
+        height: 60px;
+        border: 6px solid rgba(255, 255, 255, 0.15);
+        border-top-color: #7c8cff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .status {
+        font-size: 14px;
+        color: #c1c7e0;
+      }
+      .error-box {
+        background: #2f1f2f;
+        border: 1px solid #d55;
+        padding: 14px 16px;
+        border-radius: 8px;
+        color: #ffb3b3;
+        margin-top: 12px;
       }
       a {
-        color: #0366d6;
+        color: #7c8cff;
         text-decoration: none;
       }
       a:hover {
         text-decoration: underline;
       }
+      .note {
+        font-size: 12px;
+        margin-top: 8px;
+        color: var(--muted);
+      }
     </style>
-    <!-- Mammoth.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.8/mammoth.browser.min.js"></script>
   </head>
   <body>
-    <!-- <div class="file-info" id="file-info">Loading...</div>
-
-    <div id="output">Rendering will appear here.</div> -->
+    <div id="viewer-wrapper" aria-label="DOCX viewer">
+      <div id="header">
+        <div id="title"></div>
+        <div id="file-path"></div>
+      </div>
+      <div id="output" aria-live="polite">
+        <!-- content injected here -->
+      </div>
+      <div class="loader-overlay" id="loader">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="status" id="loader-text">Loading document...</div>
+        <div class="note">
+          If it takes long, ensure the file exists and you're serving over
+          HTTP/HTTPS.
+        </div>
+      </div>
+    </div>
 
     <script>
-      // Helper to get ?file=... from URL
       function getQueryParam(name) {
-        const params = new URLSearchParams(window.location.search);
-        return params.get(name);
+        return new URLSearchParams(window.location.search).get(name);
+      }
+      const defaultDocx = "../docs/Elevator.docx"; // adjust to your default file in same folder or relative path
+      const fileParam = getQueryParam("file");
+      const docxPath = fileParam ? decodeURIComponent(fileParam) : "";
+
+      const output = document.getElementById("output");
+      const loader = document.getElementById("loader");
+      const loaderText = document.getElementById("loader-text");
+      const filePathEl = document.getElementById("file-path");
+
+      filePathEl.textContent = docxPath;
+
+      async function showError(msg, details) {
+        loaderText.textContent = "Failed";
+        const box = document.createElement("div");
+        box.className = "error-box";
+        box.innerHTML = `<strong>${msg}</strong><div style="margin-top:6px;">${
+          details || ""
+        }</div>
+        <div style="margin-top:8px;font-size:11px;">
+          Example override: <code>?file=docs/YourDoc.docx</code>
+        </div>`;
+        output.innerHTML = "";
+        output.appendChild(box);
+        // keep loader visible briefly then hide
+        setTimeout(() => {
+          loader.style.display = "none";
+        }, 800);
       }
 
-      // Default filename if not provided
-      const defaultDocx = "../docs/Elevator.docx";
-      const fileParam = getQueryParam("file");
-      const docxPath = fileParam ? decodeURIComponent(fileParam) : defaultDocx;
-
-      const infoEl = document.getElementById("file-info");
-      const output = document.getElementById("output");
-
       async function loadDocx(path) {
-        // infoEl.textContent = `Attempting to load: ${path}`;
         try {
+          loaderText.textContent = "Fetching " + path + "...";
           const resp = await fetch(path);
           if (!resp.ok) {
             throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
           }
           const arrayBuffer = await resp.arrayBuffer();
-          // infoEl.textContent = `Loaded: ${path} (size: ${arrayBuffer.byteLength} bytes)`;
-          output.innerHTML = "<em>Converting...</em>";
+          loaderText.textContent = "Converting to HTML...";
           const result = await mammoth.convertToHtml({ arrayBuffer });
-          output.innerHTML = result.value;
+          // hide loader
+          loader.style.display = "none";
+          // inject content
+          output.innerHTML =
+            result.value || "<p><em>(no content extracted)</em></p>";
           if (result.messages && result.messages.length) {
-            const warn = document.createElement("div");
-            warn.style.fontSize = "0.8em";
-            warn.style.marginTop = "1em";
-            warn.textContent =
+            const msgContainer = document.createElement("div");
+            msgContainer.style.marginTop = "1rem";
+            msgContainer.style.fontSize = "12px";
+            msgContainer.style.color = "#aaa";
+            msgContainer.textContent =
               "Conversion notes: " +
               result.messages.map((m) => m.message).join("; ");
-            output.appendChild(warn);
+            output.appendChild(msgContainer);
           }
         } catch (err) {
-          // output.innerHTML = `<div class="error"><strong>Error loading/converting:</strong> ${err.message}</div>
-          // <p>Make sure the file exists at the relative path and you're serving over HTTP. Example usage:</p>
-          // <pre>?file=docs/mydoc.docx</pre>`;
-          // infoEl.textContent = `Failed to load: ${path}`;
+          await showError("Error loading/converting document.", err.message);
           console.error(err);
         }
       }
 
+      // Kick off
       loadDocx(docxPath);
     </script>
   </body>
