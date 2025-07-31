@@ -8,72 +8,40 @@
       :root {
         --bg: #0f111a;
         --card: #1f2330;
-        --radius: 14px;
         --border: 2px solid #2f3245;
         --text: #e8eaf6;
         --muted: #8f93b3;
-        --transition: 0.2s ease;
       }
       * {
         box-sizing: border-box;
       }
       body {
-        margin: 0;
+        /* width: 90%; */
         background: linear-gradient(135deg, #0e1020, #1f2330);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        color: var(--text);
+        color: #fff;
+        font-size: small;
         min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
+        /* display: flex;
+        flex: 1; */
+        /* justify-content: center;
+        align-items: center; */
       }
       #viewer-wrapper {
-        position: relative;
-        width: 100vw;
-        height: 100vh;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        background: var(--card);
-        border: var(--border);
-        border-radius: 0;
+        margin-top: 2em;
+        margin-bottom: 2em;
+        margin-left: 2em;
+        margin-right: 2em;
         overflow: auto;
       }
-      #header {
-        flex: 0 0 auto;
-        padding: 12px 16px;
-        background: #11152e;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 14px;
-        font-weight: 600;
-        position: sticky;
-        top: 0;
-        z-index: 2;
-      }
-      #title {
-        flex: 1;
-      }
-      #file-path {
-        font-size: 12px;
-        color: var(--muted);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 60%;
-      }
+
       #output {
-        flex: 1 1 auto;
-        position: relative;
+        flex: 1;
+        border: 1px solid gray;
+        border-radius: 25px;
         padding: 24px 32px;
         overflow: auto;
         background: #0f111a;
-      }
-      #output > * {
-        max-width: 100%;
       }
       .loader-overlay {
         position: absolute;
@@ -112,17 +80,17 @@
         color: #ffb3b3;
         margin-top: 12px;
       }
+      .note {
+        font-size: 12px;
+        margin-top: 8px;
+        color: var(--muted);
+      }
       a {
         color: #7c8cff;
         text-decoration: none;
       }
       a:hover {
         text-decoration: underline;
-      }
-      .note {
-        font-size: 12px;
-        margin-top: 8px;
-        color: var(--muted);
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.8/mammoth.browser.min.js"></script>
@@ -133,15 +101,12 @@
         <div id="title"></div>
         <div id="file-path"></div>
       </div>
-      <div id="output" aria-live="polite">
-        <!-- content injected here -->
-      </div>
+      <div id="output" aria-live="polite"></div>
       <div class="loader-overlay" id="loader">
         <div class="spinner" aria-hidden="true"></div>
         <div class="status" id="loader-text">Loading document...</div>
         <div class="note">
-          If it takes long, ensure the file exists and you're serving over
-          HTTP/HTTPS.
+          Must be served over HTTP/HTTPS; opening via file:// may fail.
         </div>
       </div>
     </div>
@@ -150,16 +115,15 @@
       function getQueryParam(name) {
         return new URLSearchParams(window.location.search).get(name);
       }
-      const defaultDocx = "../docs/Elevator.docx"; // adjust to your default file in same folder or relative path
+      const defaultDocx = "Elevator.docx"; // fallback
       const fileParam = getQueryParam("file");
-      const docxPath = fileParam ? decodeURIComponent(fileParam) : "";
+      const docxPath = fileParam ? decodeURIComponent(fileParam) : defaultDocx;
 
       const output = document.getElementById("output");
       const loader = document.getElementById("loader");
       const loaderText = document.getElementById("loader-text");
-      const filePathEl = document.getElementById("file-path");
-
-      filePathEl.textContent = docxPath;
+      // const filePathEl = document.getElementById("file-path");
+      // filePathEl.textContent = docxPath;
 
       async function showError(msg, details) {
         loaderText.textContent = "Failed";
@@ -168,12 +132,9 @@
         box.innerHTML = `<strong>${msg}</strong><div style="margin-top:6px;">${
           details || ""
         }</div>
-        <div style="margin-top:8px;font-size:11px;">
-          Example override: <code>?file=docs/YourDoc.docx</code>
-        </div>`;
+        <div style="margin-top:8px;font-size:11px;">Example override: <code>?file=path/to/YourDoc.docx</code></div>`;
         output.innerHTML = "";
         output.appendChild(box);
-        // keep loader visible briefly then hide
         setTimeout(() => {
           loader.style.display = "none";
         }, 800);
@@ -189,9 +150,7 @@
           const arrayBuffer = await resp.arrayBuffer();
           loaderText.textContent = "Converting to HTML...";
           const result = await mammoth.convertToHtml({ arrayBuffer });
-          // hide loader
           loader.style.display = "none";
-          // inject content
           output.innerHTML =
             result.value || "<p><em>(no content extracted)</em></p>";
           if (result.messages && result.messages.length) {
@@ -210,7 +169,6 @@
         }
       }
 
-      // Kick off
       loadDocx(docxPath);
     </script>
   </body>
