@@ -75,7 +75,7 @@
             throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
           }
           const arrayBuffer = await resp.arrayBuffer();
-          infoEl.textContent = `Loaded: ${path} (size: ${arrayBuffer.byteLength} bytes)`;
+          // infoEl.textContent = `Loaded: ${path} (size: ${arrayBuffer.byteLength} bytes)`;
           output.innerHTML = "<em>Converting...</em>";
           const result = await mammoth.convertToHtml({ arrayBuffer });
           output.innerHTML = result.value;
