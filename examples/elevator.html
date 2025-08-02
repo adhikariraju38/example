@@ -16,22 +16,14 @@
         box-sizing: border-box;
       }
       body {
-        /* width: 90%; */
         background: linear-gradient(135deg, #0e1020, #1f2330);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         color: #fff;
         font-size: small;
         min-height: 100vh;
-        /* display: flex;
-        flex: 1; */
-        /* justify-content: center;
-        align-items: center; */
       }
       #viewer-wrapper {
-        margin-top: 2em;
-        margin-bottom: 2em;
-        margin-left: 2em;
-        margin-right: 2em;
+        margin: 2em;
         overflow: auto;
       }
 
@@ -43,6 +35,32 @@
         overflow: auto;
         background: #0f111a;
       }
+      /* responsive image base styling */
+      #output img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        object-fit: contain;
+        margin: 0;
+        cursor: zoom-in;
+        border-radius: 4px;
+        background: #0f111a;
+      }
+
+      .img-frame {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        margin: 1em auto;
+        overflow: hidden;
+        border-radius: 6px;
+        background: #0f111a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        max-height: 80vh;
+      }
+
       .loader-overlay {
         position: absolute;
         inset: 0;
@@ -122,8 +140,6 @@
       const output = document.getElementById("output");
       const loader = document.getElementById("loader");
       const loaderText = document.getElementById("loader-text");
-      // const filePathEl = document.getElementById("file-path");
-      // filePathEl.textContent = docxPath;
 
       async function showError(msg, details) {
         loaderText.textContent = "Failed";
@@ -140,6 +156,30 @@
         }, 800);
       }
 
+      function normalizeImages() {
+        const imgs = output.querySelectorAll("img");
+        imgs.forEach((img) => {
+          if (
+            img.parentElement &&
+            img.parentElement.classList.contains("img-frame")
+          )
+            return;
+
+          const frame = document.createElement("div");
+          frame.className = "img-frame";
+
+          // Move image into frame
+          img.replaceWith(frame);
+          frame.appendChild(img);
+
+          // Ensure image fills but keeps aspect
+          img.style.width = "100%";
+          img.style.height = "auto";
+          img.style.objectFit = "contain";
+          img.style.display = "block";
+        });
+      }
+
       async function loadDocx(path) {
         try {
           loaderText.textContent = "Fetching " + path + "...";
@@ -153,6 +193,10 @@
           loader.style.display = "none";
           output.innerHTML =
             result.value || "<p><em>(no content extracted)</em></p>";
+
+          // normalize images after content is in DOM
+          normalizeImages();
+
           if (result.messages && result.messages.length) {
             const msgContainer = document.createElement("div");
             msgContainer.style.marginTop = "1rem";
@@ -168,6 +212,31 @@
           console.error(err);
         }
       }
+
+      // lightbox/enlarge on click
+      output.addEventListener("click", (e) => {
+        const img = e.target.closest("img");
+        if (!img) return;
+        const overlay = document.createElement("div");
+        overlay.style.position = "fixed";
+        overlay.style.inset = "0";
+        overlay.style.background = "rgba(0,0,0,0.85)";
+        overlay.style.display = "flex";
+        overlay.style.alignItems = "center";
+        overlay.style.justifyContent = "center";
+        overlay.style.cursor = "zoom-out";
+        overlay.style.zIndex = "9999";
+
+        const clone = img.cloneNode();
+        clone.style.maxWidth = "90%";
+        clone.style.maxHeight = "90%";
+        clone.style.objectFit = "contain";
+        clone.style.boxShadow = "0 0 40px rgba(0,0,0,0.5)";
+        overlay.appendChild(clone);
+
+        overlay.addEventListener("click", () => overlay.remove());
+        document.body.appendChild(overlay);
+      });
 
       loadDocx(docxPath);
     </script>
